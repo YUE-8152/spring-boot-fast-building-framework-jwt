@@ -32,25 +32,25 @@ public class SysUserController {
     @PostMapping("/add")
     public Result add(@RequestBody SysUser sysUser) {
         sysUserService.insert(sysUser);
-        return ResultGenerator.suess();
+        return ResultGenerator.success();
     }
 
     @PostMapping("/delete")
     public Result delete(@RequestParam Integer id) {
         sysUserService.deleteById(id);
-        return ResultGenerator.suess();
+        return ResultGenerator.success();
     }
 
     @PostMapping("/update")
     public Result update(@RequestBody SysUser sysUser) {
         sysUserService.update(sysUser);
-        return ResultGenerator.suess();
+        return ResultGenerator.success();
     }
 
     @PostMapping("/detail")
     public Result detail(@RequestParam Integer id) {
         SysUser sysUser = sysUserService.findById(id);
-        return ResultGenerator.suess(sysUser);
+        return ResultGenerator.success(sysUser);
     }
 
     @PostMapping("/list")
@@ -58,7 +58,7 @@ public class SysUserController {
         PageHelper.startPage(page, size);
         List<SysUser> list = sysUserService.findAll();
         PageInfo pageInfo = new PageInfo(list);
-        return ResultGenerator.suess(pageInfo);
+        return ResultGenerator.success(pageInfo);
     }
 
     @PostMapping("/login")
@@ -70,7 +70,7 @@ public class SysUserController {
         if (sysUser.getPassword().equals(user.getPassword())) {
             String token = JWTUtils.createJWT(2 * 60 * 1000, sysUser);
             response.setHeader("token", token);
-            return ResultGenerator.suess(token);
+            return ResultGenerator.success(token);
         } else {
             return ResultGenerator.fail("账号密码不匹配.");
         }

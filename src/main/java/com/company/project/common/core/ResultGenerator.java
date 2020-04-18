@@ -6,13 +6,13 @@ package com.company.project.common.core;
 public class ResultGenerator {
     private static final String DEFAULT_SUCCESS_MESSAGE = "SUCCESS";
 
-    public static Result suess() {
+    public static Result success() {
         return new Result()
                 .setCode(ResultCode.SUCCESS)
                 .setMessage(DEFAULT_SUCCESS_MESSAGE);
     }
 
-    public static <T> Result<T> suess(T data) {
+    public static <T> Result<T> success(T data) {
         return new Result()
                 .setCode(ResultCode.SUCCESS)
                 .setMessage(DEFAULT_SUCCESS_MESSAGE)
