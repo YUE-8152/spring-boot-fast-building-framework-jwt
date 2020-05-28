@@ -44,7 +44,7 @@ public class CodeGenerator {
     private static final String DATE = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss").format(new Date());
 
     public static void main(String[] args) {
-        genCode("sys_user");
+        genCode("order_item");
         //genCodeByCustomModelName("输入表名","输入自定义Model名称");
     }
 

@@ -14,20 +14,21 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson.support.config.FastJsonConfig;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 
-import com.company.project.common.core.Result;
-import com.company.project.common.core.ResultCode;
-import com.company.project.common.core.ServiceException;
+import com.company.project.common.core.*;
 import com.company.project.common.utils.JWTUtils;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.SignatureException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -45,6 +46,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final Logger logger = LoggerFactory.getLogger(WebMvcConfig.class);
     @Value("${spring.profiles.active}")
     private String env;//当前激活的配置文件
+
+    @Autowired
+    private LoginUserArgumentResolver loginUserArgumentResolver;
+
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(loginUserArgumentResolver);
+    }
 
     //使用阿里 FastJson 作为JSON MessageConverter
     @Override
@@ -67,6 +76,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> exceptionResolvers) {
         exceptionResolvers.add(new HandlerExceptionResolver() {
+            @Override
             public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception e) {
                 Result result = new Result();
                 if (e instanceof ServiceException) {//业务失败的异常，如“账号或密码错误”
@@ -111,14 +121,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
     //添加拦截器
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        if (!"dev".equals(env)) { //开发环境忽略Token认证
+        if ("dev".equals(env)) { //开发环境忽略Token认证
             registry.addInterceptor(new HandlerInterceptorAdapter() {
                 @Override
-                public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+                public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
                     //验证签名
                     String validate = validateToken(request);
                     if (StringUtils.isEmpty(validate)) {
-                        return true;
+                        if (handler instanceof HandlerMethod) {
+                            String token = request.getHeader("Authorization");
+                            Claims claims = JWTUtils.parseJWT(token, JWTUtils.JWTKEY);
+                            LoginUser loginUser = savaLoginInfo(claims);
+                            UserContext.setUser(loginUser);
+                        }
+                        return super.preHandle(request, response, handler);
                     } else {
                         logger.warn("Token无效，请求接口：{}，请求IP：{}，请求参数：{}",
                                 request.getRequestURI(), getIpAddress(request), JSON.toJSONString(request.getParameterMap()));
@@ -165,6 +181,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
             return "其它错误";
         }
         return null;
+    }
+
+    private LoginUser savaLoginInfo(Claims claims) {
+        LoginUser loginUser = new LoginUser();
+        loginUser.setUserId(claims.get("id") == null ? null : Integer.valueOf(claims.get("id").toString()));
+        loginUser.setUserName(claims.get("username") == null ? null : claims.get("username").toString());
+        loginUser.setPassword(claims.get("password") == null ? null : claims.get("password").toString());
+        return loginUser;
     }
 
     private String getIpAddress(HttpServletRequest request) {
